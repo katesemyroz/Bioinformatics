@@ -1,52 +1,77 @@
+'''
+Problem:
+Say that we have two strings s and t of respective lengths m and n
+and an alignment score. Let's define a matrix M corresponding to s and t
+by setting Mj,k equal to the maximum score of any alignment that aligns s[j]
+with t[k]. So each entry in M can be equal to at most the maximum score of any
+alignment of s and t.
+
+Given: Two DNA strings s and t in FASTA format, each having length at most 1000 bp.
+
+Return: The maximum alignment score of a global alignment of s and t, followed by the
+sum of all elements of the matrix M corresponding to s and t that was defined above.
+Apply the mismatch score introduced in “Finding a Motif with Modifications”.
+'''
+
+
 from Bio import pairwise2
 from Bio import SeqIO
+import numpy as np
+import time
 
+'''First, we need to get sequences from file'''
 seq1 = SeqIO.read("C:\\Users\\pc\\Downloads\\1.fasta", "fasta").seq
 seq2 = SeqIO.read("C:\\Users\\pc\\Downloads\\2.fasta", "fasta").seq
 
-print(seq1)
-print(seq2)
+# print(seq1)
+# print(len(seq1))
+# print(seq2)
+# print(len(seq2))
 
-M = [[3,   0, -1, -4,  -5,  -10, -11],
-    [ 0,   3,  0, -1,  -4,  -7,  -10],
-    [-1,   0,  3, -2,  -1,  -6,  -7],
-    [-4,  -1,  0,  3,   0,  -3,  -6],
-    [-7,  -4, -3,  2,   3,   0,  -3],
-    [-10, -5, -6, -3,   0,   3,  -2],
-    [-11, -10,-5, -6,  -1,  -2,   3]]
+seq1_len = len(seq1)
+seq2_len = len(seq2)
 
-K = [[0 for x in range(7)] for y in range(7)]
+'''Function which returns 1 if symbols are the same and -1 if not'''
+def compare_two_symbols(symbol1, symbol2):
+    if symbol1 == symbol2:
+        return 1.0
+    else:
+        return -1.0
 
-def generate_matrix(seq1, seq2):
-    for x in range(len(seq1)):
-        for y in range(len(seq2)):
-            if x != 0 or y != 0:
-                diff_x_y = abs(x-y)
-            else:
-                diff_x_y = 0
-            if x < y:
-                new_seq1 = seq1[diff_x_y:]
-                new_seq2 = seq2[:len(seq2)-diff_x_y]
-            if x > y:
-                new_seq1 = seq1[:len(seq2)-diff_x_y]
-                new_seq2 = seq2[diff_x_y:]
-            if x == y:
-                new_seq1 = seq1
-                new_seq2 = seq2
-            print("=================", x, y)
-            print("new_seq1 ", new_seq1)
-            print("new_seq2 ", new_seq2)
-            q = pairwise2.align.globalms(new_seq1, new_seq2, 1, -1, -1, 0)
-            w = [a[2] for a in q]
-            print(q)
-            print(w)
-            print("max(w) = ", max(w),"diff_x_y*2 = ",diff_x_y*2 )
-            K[x][y] = max(w)-diff_x_y*2
+'''Function which returns maximum align score of alignment(seq1, seq2)'''
+def get_max_alignment_score(seq1, seq2):
+    if len(seq1) == 0 and len(seq2) != 0:
+        return -len(seq2)
+    elif len(seq2) == 0 and len(seq1) != 0:
+            return -len(seq1)
+    else:
+        max_score = pairwise2.align.globalms(seq1, seq2, 1, -1, -1, -1, score_only=True)
+        if max_score == []:
+            return 0
+        else:
+            return max_score
 
-generate_matrix(seq1, seq2)
+'''Generate matrix with maximum alignment scores for each j and t'''
+def generate_matrix(seq1, seq2, seq1_len, seq2_len):
+    M = np.empty([seq1_len, seq2_len])
+    for j in range(seq1_len):
+        for t in range(seq2_len):
+            score_from_left_part = get_max_alignment_score(seq1[:j], seq2[:t])
+            middle_score = compare_two_symbols(seq1[j], seq2[t])
+            score_from_right_part = get_max_alignment_score(seq1[j+1:], seq2[t+1:])
+            M[j][t] = score_from_left_part + middle_score + score_from_right_part
+    return M
 
-print("KKKKKKKKKKK")
-for x in range(len(K)):
-    for y in range(len(K[x])):
-        print(K[x][y], end=" ")
-    print()
+
+'''In this function I count maximum alignment score from all scores and sum of all scores'''
+def count_max_and_sum(matrix):
+    suma = np.sum(matrix)
+    maximum = np.amax(matrix)
+    return maximum, suma
+
+
+M = generate_matrix(seq1, seq2, seq1_len, seq2_len)
+# print(M)
+maximum, suma = count_max_and_sum(M)
+print(maximum, suma)
+

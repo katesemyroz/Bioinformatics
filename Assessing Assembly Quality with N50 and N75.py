@@ -12,12 +12,15 @@ length does not exceed 50 kbp).
 Return: N50 and N75 for this collection of strings.
 """
 
+'''First, we need to extract data from file'''
 def get_data_from_file(filename):
     file = open(filename, "r")
     data = [len(line.replace("\n", "")) for line in file]
     file.close()
     return data
 
+'''Function which returns maximum positive integer that total
+number of nucleotides of all contigs having length ≥L'''
 
 def get_nx_value(data, procents):
     result = 0
